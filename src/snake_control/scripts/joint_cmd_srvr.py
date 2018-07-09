@@ -11,7 +11,7 @@ import numpy as np
 class JointCmds:
     """ The class provides a dictionary mapping joints to command values.
     """
-    def __init__( self, yaml_file_name='/home/alex/Documents/CMU/projects/' \
+    def __init__( self, yaml_file_name='/home/paul/' \
                   'snake_ws/src/snake_control/config/modules.yaml' ) :
 
         import yaml
@@ -24,31 +24,96 @@ class JointCmds:
         self.num_modules = len(self.modules_dict)
         self.sorted_joints_list = sorted(self.modules_dict.keys())
         self.jnt_cmd_dict = {}
-        self.default_cmd_params = [0.38*np.pi/2.0, 3.0/8.0, 0.08]
+        # self.default_cmd_params = [0.38*np.pi/2.0, 3.0/8.0, 0.08]
+        self.default_cmd_params = [60*np.pi/180, 40*np.pi/180, 0, 0] # A_o, A_e, C_o, C_e
+	self.joints_list = []
         self.t = 0.0
           
-
+        for i in range(self.num_modules):
+            leg_str = 'S_'
+            if i < 10:
+                leg_str += '0' + str(i)
+            else:
+                leg_str += str(i)
+            self.joints_list += [leg_str]
     def update( self, dt, cmd_params=None ) :
         """ Publishes snake joint commands for tracking with PID controller
             :param dt: The time elapsed since the last command
             :param cmd_params: A vector of control parameters
         """
 
-        self.t += dt
+#         self.t += dt
 
+#         if cmd_params is None :
+#             cmd_params = default_cmd_params
+        
+#         A = cmd_params[0]        # the amplitude of the serpenoid equation
+#         omega_t = cmd_params[1]  # the temporal frequency of the serpenoid equation
+#         omega_s = cmd_params[2]  # the spatial frequency of the serpenoid equation
+
+#         ## sidewinding gait ##        
+#         d = 1  # direction
+
+#         for i, jnt in enumerate( self.sorted_joints_list ) :
+#             self.jnt_cmd_dict[jnt] = A*np.sin( 2.0*np.pi*(d*self.t + (i%2)*omega_t + i*omega_s) )
+                
+#         return self.jnt_cmd_dict
+        def sidewinding():
+            # spatial frequency
+            spat_freq = 0.08
+
+            # temporal phase offset between horizontal and vertical waves
+            TPO = 3.0/8.0
+
+            # amplitude
+            A = 0.38*np.pi/2.0
+
+            # direction
+            d = 1
+
+            for i, jnt in enumerate(self.joints_list):
+                self.jnt_cmd_dict[jnt] = A * \
+                    np.sin(2.0*np.pi*(d*self.t + (i % 2)*TPO + i*spat_freq))
+
+        def slithering(cmd_params):
+            N = self.num_modules
+            # w = 0.5
+            w = cmd_params[4]
+            y = 0.3
+            z = 0.7
+            # A_o = 60 * np.pi / 180
+            # A_e = 40 * np.pi / 180
+            # C_o = 20 * np.pi / 180
+            # C_e = 0
+            A_o = cmd_params[0]
+            A_e = cmd_params[1]
+            C_o = cmd_params[2]
+            C_e = cmd_params[3]
+
+            for n, jnt in enumerate(self.joints_list):
+                if n % 2 == 1:
+                    x = 1.75
+                    o = 1
+                    A = A_o
+                    delta = 0
+                    C = C_o
+                else:
+                    x = 3.5
+                    o = 2
+                    A = A_e
+                    delta = np.pi / 2
+                    C = C_e
+                Omega = (w + x * 2 / N) * np.pi
+                P = z * n / N + y
+
+                self.jnt_cmd_dict[jnt] = C + P * A * \
+                    np.sin(Omega * n + o * self.t + delta)
+
+        self.default_cmd_params = [60*np.pi/180, 40*np.pi/180, 0, 0] # A_o, A_e, C_o, C_e
+        self.t += dt
         if cmd_params is None :
             cmd_params = default_cmd_params
-        
-        A = cmd_params[0]        # the amplitude of the serpenoid equation
-        omega_t = cmd_params[1]  # the temporal frequency of the serpenoid equation
-        omega_s = cmd_params[2]  # the spatial frequency of the serpenoid equation
-
-        ## sidewinding gait ##        
-        d = 1  # direction
-
-        for i, jnt in enumerate( self.sorted_joints_list ) :
-            self.jnt_cmd_dict[jnt] = A*np.sin( 2.0*np.pi*(d*self.t + (i%2)*omega_t + i*omega_s) )
-                
+        slithering(cmd_params)
         return self.jnt_cmd_dict
 
     

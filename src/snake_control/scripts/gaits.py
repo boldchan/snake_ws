@@ -57,21 +57,25 @@ class JointCmds:
             z = 0.7
             A_o = 60 * np.pi / 180
             A_e = 40 * np.pi / 180
+            C_o = 20 * np.pi / 180
+            C_e = 0
             for n, jnt in enumerate(self.joints_list):
                 if n % 2 == 1:
                     x = 1.75
                     o = 1
                     A = A_o
                     delta = 0
+                    C = C_o
                 else:
                     x = 3.5
                     o = 2
                     A = A_e
                     delta = np.pi / 2
+                    C = C_e
                 Omega = (w + x * 2 / N) * np.pi
                 P = z * n / N + y
 
-                self.jnt_cmd_dict[jnt] = P * A * \
+                self.jnt_cmd_dict[jnt] = C + P * A * \
                     np.sin(Omega * n + o * self.t + delta)
 
         self.t += dt
@@ -106,6 +110,6 @@ if __name__ == "__main__":
     try:
         num_modules = 16
         hz = 100
-        publish_commands(num_modules, hz)
+        #publish_commands(num_modules, hz)
     except rospy.ROSInterruptException:
         pass

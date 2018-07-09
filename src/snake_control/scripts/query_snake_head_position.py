@@ -5,6 +5,7 @@ from gazebo_msgs.srv import GetModelState, GetModelStateRequest
 from snake_control.msg import snake_head_rel_pos
 import numpy as np
 
+
 rospy.init_node('snake_head_pos_pub')
 
 pos_pub=rospy.Publisher('/snake_head_pos', snake_head_rel_pos)
@@ -21,7 +22,11 @@ model.relative_entity_name = 'target::link'
 model2 = GetModelStateRequest()#to get coordinate of snake head
 model2.model_name='robot'
 model2.relative_entity_name = ''
-r = rospy.Rate(2)
+r = rospy.Rate(1/(2*np.pi))
+
+# create training dataset
+# pos_log = []
+# pos_num = 400
 
 while not rospy.is_shutdown():
     result = get_model_srv(model)
@@ -42,9 +47,24 @@ while not rospy.is_shutdown():
     
     pos_rel = np.dot(rotation_matrix.T,np.array([x_rel_world, y_rel_world, z_rel_world]))
     pos.x_rel = pos_rel[0]
-    pos.y_rel = pos_rel[1] 
+    pos.y_rel = pos_rel[1]
+
+    time = rospy.get_rostime()
+    rospy.loginfo("%s, %f, %f"%(time.secs, pos.x_rel, pos.y_rel))
+
+# create training dataset
+    # if len(pos_log) < pos_num:
+    #     pos_log.append([pos.x_rel, pos.y_rel])
+    # elif len(pos_log) == pos_num:
+    #     with open('pos_log.txt', 'w') as f:
+    #         for dat in pos_log:
+    #             f.write(str(dat[0]) + ',' + str(dat[1]) + '\n')
+    #         f.close()
+    # else:
+    #     pass
 
 
     pos_pub.publish(pos)
 
     r.sleep()
+
