@@ -26,7 +26,7 @@ class JointCmds:
         self.jnt_cmd_dict = {}
         # self.default_cmd_params = [0.38*np.pi/2.0, 3.0/8.0, 0.08]
         self.default_cmd_params = [60*np.pi/180, 40*np.pi/180, 0, 0] # A_o, A_e, C_o, C_e
-	self.joints_list = []
+        self.joints_list = []
         self.t = 0.0
           
         for i in range(self.num_modules):

@@ -22,7 +22,8 @@ model.relative_entity_name = 'target::link'
 model2 = GetModelStateRequest()#to get coordinate of snake head
 model2.model_name='robot'
 model2.relative_entity_name = ''
-r = rospy.Rate(1/(2*np.pi))
+# r = rospy.Rate(1/(2*np.pi))
+r = rospy.Rate(30)
 
 # create training dataset
 # pos_log = []
