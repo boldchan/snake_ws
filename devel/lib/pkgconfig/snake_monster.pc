@@ -1,8 +1,0 @@
-prefix=/home/paul/snake_ws/devel
-
-Name: snake_monster
-Description: Description of snake_monster
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/paul/snake_ws/devel/lib 
-Requires: 
