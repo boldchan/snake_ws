@@ -54,6 +54,9 @@ class Two_Layer_SNN(object):
 
         self.eta = p.eta #learning rate, ignore decay for now
 
+        self.STDP1 = np.zeros((input_dim, hidden_dim))
+        self.STDP2 = np.zeros((hidden_dim, output_dim))
+
 
     # def reward(self, x, y = None):
     #     '''
@@ -217,13 +220,17 @@ class Two_Layer_SNN(object):
             reward = (abs(self.W2[i][0])*rewardL + abs(self.W2[i][1])*rewardR) / (abs(self.W2[i][0]) + abs(self.W2[i][1]))
             self.reward1[:,i] = reward
 
-    def train(self):
+    def train(self, train_single):
         ##todo##
         data = load_data()
         num_data = len(data['input'])
-        print(data['input'][0])
-        print(data['output'][0])
+        if(train_single):
+            val = {'input' : data['input'][2], 'output' : data['output'][2]}
+            out_deg = self.simulate(val, 100)
+            print('Output: ' + str(out_deg))
+            print('Input: ' + str(data['input'][2]))
         for i in range(num_data):
+            if(train_single): break
             # i = 2
             d = data['input'][i]
             alpha = data['output'][i]
@@ -235,16 +242,16 @@ class Two_Layer_SNN(object):
             self.updateSTDP1(out1, out2)
             self.updateSTDP2(out2, out3)
             self.calculate_deltaW()
-            print(self.W2)
-            print(out)
-            print(alpha)
+            #print('Weights :' + str(self.W2))
+            print('Predicted :' + str(out))
+            print('Actual Value:' + str(alpha))
             # print(out - alpha)
 
     def simulate(self, data, iter):
-        input = data['input']
+        input_val = data['input']
         alpha = data['output']
         for i in range(iter):
-            _, out1 = self.input_neuron.forward(input)
+            _, out1 = self.input_neuron.forward(input_val)
             _, out2 = self.hidden_neuron.forward(out1, self.W1)
             _, out3 = self.output_neuron.decode(out2, self.W2)
             out = self.cal_degree([out3[0][-1], out3[1][-1]])
@@ -294,7 +301,8 @@ def load_data():
 if __name__ == '__main__':
     snn = Two_Layer_SNN(hidden_dim = 10)
     print(snn.W2)
-    snn.train()
+    train_single = False ## Set this value to true in order to train the network on a single value
+    snn.train(train_single)
     snn.test([0.7, 0, 0])
 
 
