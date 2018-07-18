@@ -192,7 +192,7 @@ class Two_Layer_SNN(object):
         if np.abs(expected[1]) < np.abs(expected[0]):
             # turn right
             rewardR = (np.abs(expected[1]) - np.abs(out[1]))/p.ymax
-            rewardL = 0.01
+            rewardL = 0
             # if rewardR > 0:
             #     rewardL = 0.1
             # elif np.abs(out[1]) > np.abs(out[0]):
@@ -202,7 +202,7 @@ class Two_Layer_SNN(object):
         else:
             # turn left
             rewardL = (np.abs(expected[0]) - np.abs(out[0]))/p.ymax
-            rewardR = 0.01
+            rewardR = 0
             # if reawrdL > 0:
             #     rewardR = 0.1
             # elif np.abs(out[0]) > np.abs(out[1]):
@@ -223,8 +223,9 @@ class Two_Layer_SNN(object):
         num_data = len(data['input'])
         print(data['input'][0])
         print(data['output'][0])
-        for i in range(num_data):
-            # i = 2
+        # for i in range(num_data):
+        for i in range(1000):
+            i = 2
             d = data['input'][i]
             alpha = data['output'][i]
             _, out1 = self.input_neuron.forward(d)
