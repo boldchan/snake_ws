@@ -10,6 +10,8 @@ from snake_control.srv import *
 class SNN_Node(object):
     def __init__(self):
         self.snn = Two_Layer_SNN(hidden_dim = 10)
+        self.snn.W1 = np.loadtxt('Weights1.txt')
+        self.snn.W2 = np.loadtxt('Weights2.txt')
         rospy.wait_for_service('/snake/publish_joint_commands')
         self.commands_srv = rospy.ServiceProxy('/snake/publish_joint_commands', PublishJointCmds)
         rospy.wait_for_service('/gazebo/get_model_state')

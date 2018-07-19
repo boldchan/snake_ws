@@ -52,7 +52,7 @@ class Two_Layer_SNN(object):
         self.reward2 = np.zeros_like(W2)
         self.reward3 = np.zeros_like(W3)
 
-        self.eta = p.eta #learning rate, ignore decay for now
+        self.eta = p.eta_max #learning rate, ignore decay for now
 
         self.STDP1 = np.zeros((input_dim, hidden_dim))
         self.STDP2 = np.zeros((hidden_dim, output_dim))
@@ -215,7 +215,7 @@ class Two_Layer_SNN(object):
 
         self.reward2[:,0] = rewardL
         self.reward2[:,1] = rewardR
-
+        
         for i in range(self.hidden_dim): #this can be made compact
             reward = (abs(self.W2[i][0])*rewardL + abs(self.W2[i][1])*rewardR) / (abs(self.W2[i][0]) + abs(self.W2[i][1]))
             self.reward1[:,i] = reward
@@ -224,6 +224,7 @@ class Two_Layer_SNN(object):
         ##todo##
         data = load_data()
         num_data = len(data['input'])
+        eta_reduction = (p.eta_max - p.eta_min) / num_data
         if(train_single):
             val = {'input' : data['input'][2], 'output' : data['output'][2]}
             out_deg = self.simulate(val, 100)
@@ -231,20 +232,23 @@ class Two_Layer_SNN(object):
             print('Input: ' + str(data['input'][2]))
         for i in range(num_data):
             if(train_single): break
-            # i = 2
+            i = 12
             d = data['input'][i]
             alpha = data['output'][i]
             _, out1 = self.input_neuron.forward(d)
             _, out2 = self.hidden_neuron.forward(out1, self.W1)
             _, out3 = self.output_neuron.decode(out2, self.W2)
+            #import pdb;pdb.set_trace()
             out = self.cal_degree([out3[0][-1], out3[1][-1]])
             self.update_rewards(out, alpha)
             self.updateSTDP1(out1, out2)
             self.updateSTDP2(out2, out3)
             self.calculate_deltaW()
+            self.eta = self.eta - eta_reduction
             #print('Weights :' + str(self.W2))
             print('Predicted :' + str(out))
             print('Actual Value:' + str(alpha))
+            print('Learning rate:' + str(self.eta))
             # print(out - alpha)
 
     def simulate(self, data, iter):
@@ -303,6 +307,8 @@ if __name__ == '__main__':
     print(snn.W2)
     train_single = False ## Set this value to true in order to train the network on a single value
     snn.train(train_single)
+    np.savetxt('Weights1.txt', snn.W1)
+    np.savetxt('Weights2.txt', snn.W2)
     snn.test([0.7, 0, 0])
 
 
