@@ -118,7 +118,7 @@ class Two_Layer_SNN(object):
             for i in range(self.input_dim):
                 for j in range(self.hidden_dim):
                     apre1[i][j] -= apre1[i][j]/p.taupre * self.dt
-                    apost1[i][j] -=apost1[i][j]/p.taupost * self.dt
+                    apost1[i][j] -= apost1[i][j]/p.taupost * self.dt
                     if(h1[i][t]):
                         # apre1[i][j] += (p.xb>apre1[i][j])*(1-apre1[i][j]/p.xb)
                         # STDP1[i][j] -= p.A_minus/p.yc*apre1[i][j]*apost1[i][j]
@@ -215,7 +215,7 @@ class Two_Layer_SNN(object):
 
         self.reward2[:,0] = rewardL
         self.reward2[:,1] = rewardR
-        
+
         for i in range(self.hidden_dim): #this can be made compact
             reward = (abs(self.W2[i][0])*rewardL + abs(self.W2[i][1])*rewardR) / (abs(self.W2[i][0]) + abs(self.W2[i][1]))
             self.reward1[:,i] = reward
@@ -269,8 +269,8 @@ class Two_Layer_SNN(object):
         deg = [0., 0.]
         act_l = out[0]/5
         act_r = out[1]/5
-        deg[0] = -180*act_l
-        deg[1] = 180*act_r 
+        deg[0] = 180*act_l
+        deg[1] = -180*act_r
         return deg
 
     def test(self, input):
@@ -310,6 +310,3 @@ if __name__ == '__main__':
     np.savetxt('Weights1.txt', snn.W1)
     np.savetxt('Weights2.txt', snn.W2)
     snn.test([0.7, 0, 0])
-
-
-

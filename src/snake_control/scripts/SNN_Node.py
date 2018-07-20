@@ -55,20 +55,20 @@ class SNN_Node(object):
 
         if rel_x < 0 or (rel_x > 0 and rel_x < 1.7 * abs(rel_y)):
             if rel_y > 0:
-                alphaR = 30
-                alphaL = -180
+                alphaL = 30
+                alphaR = -180
             else:
-                alphaR = 180
-                alphaL = -30
+                alphaL = 180
+                alphaR = -30
         else:
             val = abs(rel_y) / abs(rel_x)
             alpha = np.arctan(val) * 180 / np.pi
             if rel_y > 0:
-                alphaR = alpha
-                alphaL = -180
+                alphaL = alpha
+                alphaR = -180
             else:
-                alphaR = 180
-                alphaL = -alpha
+                alphaL = 180
+                alphaR = -alpha
         output = [alphaL, alphaR]
         self.dataset = {'input':input, 'output':output}
 
@@ -78,12 +78,12 @@ class SNN_Node(object):
         alphaL, alphaR = self.snn.simulate(self.dataset, 10)
         if abs(alphaL) < abs(alphaR):
             if abs(alphaL) > 30:
-                C_o = -30
+                C_o = 30
             else:
                 C_o = alphaL
         else:
             if alphaR > 30:
-                C_o = 30
+                C_o = -30
             else:
                 C_o = alphaR
         self.control_cmd = [60 * np.pi /180, 40 * np.pi / 180, C_o *np.pi / 180, 0, 0.5]
