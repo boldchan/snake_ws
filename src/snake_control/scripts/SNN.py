@@ -3,14 +3,27 @@ from Neuron import input_neuron, hidden_neuron, output_neuron, special_neuron
 import parameters as p
 
 
-def cal_degree(pos):
-    act_l = pos[0] / 5
-    act_r = pos[1] / 5
-    deg = [
-        180 * act_l,
-        -180 * act_r,
-    ]
-    return deg
+def load_data(filename='target_data.txt'):
+    input_data = []
+    output_data = []
+    with open(filename, 'r') as f:
+        for line in f:
+            data = list(map(float, line[:-1].split(',')))
+            data[:2] /= np.sqrt(data[0]**2 + data[1]**2)
+            data_rel = [0, 0, 0]
+            if data[1] > 0:
+                data_rel[0] = data[1]
+            else:
+                data_rel[2] = -data[1]
+            if (data[0] < 0):
+                data_rel[1] = -data[0]
+            input_data.append(data_rel)
+            output_data.append(data[2:])
+    return {'input': input_data, 'output': output_data}
+
+
+def slice_data(data, i, j):
+    return {key: data[key][i:j + 1] for key in data.keys()}
 
 
 class Two_Layer_SNN(object):
@@ -21,16 +34,8 @@ class Two_Layer_SNN(object):
     The architecture should be input layer - affine - hidden layer - affine - output layer, in which 
     synapse applies first alpha function then affine and its output is the postsynaptic potential (PSP) 
     '''
-
     @staticmethod
-    def load_weight():
-        W1 = np.loadtxt('W1.txt')
-        W2 = np.loadtxt('W2.txt')
-        W3 = np.loadtxt('W3.txt')
-        return W1, W2, W3
-
-    @staticmethod
-    def generate_weight(input_dim, hidden_dim, output_dim):
+    def __generate_weight(input_dim, hidden_dim, output_dim):
         n = input_dim * hidden_dim
         ratio = 0.8
         W1 = np.array(
@@ -51,7 +56,14 @@ class Two_Layer_SNN(object):
         W3 = np.random.randn(input_dim, 1)
         return W1, W2, W3
 
-    def __init__(self, input_dim=3, hidden_dim=3, output_dim=2, T=p.T, dt=p.dt, t_rest=0):
+    @staticmethod
+    def cal_degree(pos):
+        act_l = pos[0] / 5
+        act_r = pos[1] / 5
+        deg = [180 * act_l, -180 * act_r]
+        return deg
+
+    def __init__(self, input_dim=3, hidden_dim=3, output_dim=2, T=p.T, dt=p.dt, t_rest=0, load=False):
         self.T = T  # total time to simulate(ms)
         self.dt = dt  # simulation time step(ms)
         self.t_rest = t_rest  # initial refrectory time
@@ -65,26 +77,35 @@ class Two_Layer_SNN(object):
         self.output_neuron = output_neuron(output_dim)
         self.special_neuron = special_neuron(1)
 
-        # W1, W2, W3 = Two_Layer_SNN.generate_weight(
-        #     input_dim, hidden_dim, output_dim
-        # )
-        W1, W2, W3 = Two_Layer_SNN.load_weight()
-        self.W1 = W1
-        self.W2 = W2
-        self.W3 = W3
+        if load:
+            self.load_weight()
+        else:
+            self.W1, self.W2, self.W3 = Two_Layer_SNN.generate_weight(
+                input_dim, hidden_dim, output_dim
+            )
 
-        self.STDP1 = np.zeros_like(W1)
-        self.STDP2 = np.zeros_like(W2)
-        self.STDP3 = np.zeros_like(W3)
+        self.STDP1 = np.zeros_like(self.W1)
+        self.STDP2 = np.zeros_like(self.W2)
+        self.STDP3 = np.zeros_like(self.W3)
 
-        self.reward1 = np.zeros_like(W1)
-        self.reward2 = np.zeros_like(W2)
-        self.reward3 = np.zeros_like(W3)
+        self.reward1 = np.zeros_like(self.W1)
+        self.reward2 = np.zeros_like(self.W2)
+        self.reward3 = np.zeros_like(self.W3)
 
         self.eta = p.eta_max  # learning rate, ignore decay for now
 
         self.STDP1 = np.zeros((input_dim, hidden_dim))
         self.STDP2 = np.zeros((hidden_dim, output_dim))
+
+    def save_weight(self):
+        np.savetxt('W1.txt', self.W1)
+        np.savetxt('W2.txt', self.W2)
+        np.savetxt('W3.txt', self.W3)
+
+    def load_weight(self):
+        self.W1 = np.loadtxt('W1.txt')
+        self.W2 = np.loadtxt('W2.txt')
+        self.W3 = np.loadtxt('W3.txt')
 
     def update_stdp(self, l1, l2):
         '''
@@ -169,68 +190,41 @@ class Two_Layer_SNN(object):
                       * rewardR) / (abs(self.W2[i][0]) + abs(self.W2[i][1]))
             self.reward1[:, i] = reward
 
-    def train(self, data):
+    def __feed(self, data, alpha):
+        _, out1 = self.input_neuron.forward(data)
+        _, out2 = self.hidden_neuron.forward(out1, self.W1)
+        _, out3 = self.output_neuron.decode(out2, self.W2)
+        res = Two_Layer_SNN.cal_degree([out3[0][-1], out3[1][-1]])
+        self.update_rewards(res, alpha)
+        self.STDP1 = self.update_stdp(out1, out2)
+        self.STDP2 = self.update_stdp(out2, out3)
+        self.calculate_deltaW()
+        return res
+
+    def train(self, data, eta_reduction=None):
         num_data = len(data['input'])
-        eta_reduction = (p.eta_max - p.eta_min) / num_data
-        for i in range(num_data):
-            d = data['input'][i]
-            alpha = data['output'][i]
-            _, out1 = self.input_neuron.forward(d)
-            _, out2 = self.hidden_neuron.forward(out1, self.W1)
-            _, out3 = self.output_neuron.decode(out2, self.W2)
-            out = cal_degree([out3[0][-1], out3[1][-1]])
-            self.update_rewards(out, alpha)
-            self.STDP1 = self.update_stdp(out1, out2)
-            self.STDP2 = self.update_stdp(out2, out3)
-            self.calculate_deltaW()
+        if not eta_reduction:
+            eta_reduction = (p.eta_max - p.eta_min) / num_data
+        for d, alpha in zip(data['input'], data['output']):
+            output = self.__feed(d, alpha)
             self.eta = self.eta - eta_reduction
-            print('Predicted :' + str(out))
-            print('Actual Value:' + str(alpha))
-            print('Learning rate:' + str(self.eta))
+            print('Predicted :    {}'.format(output))
+            print('Actual Value:  {}'.format(alpha))
+            print('Learning rate: {}'.format(self.eta))
 
-    def simulate(self, data, iter):
-        input_val = data['input']
+    def simulate(self, data, iterations):
+        input_data = data['input']
         alpha = data['output']
-        for i in range(iter):
-            _, out1 = self.input_neuron.forward(input_val)
-            _, out2 = self.hidden_neuron.forward(out1, self.W1)
-            _, out3 = self.output_neuron.decode(out2, self.W2)
-            out = cal_degree([out3[0][-1], out3[1][-1]])
-            self.update_rewards(out, alpha)
-            self.STDP1 = self.update_stdp(out1, out2)
-            self.STDP2 = self.update_stdp(out2, out3)
-            self.calculate_deltaW()
-        return cal_degree(out)
-
-
-def load_data(filename='target_data.txt'):
-    input_data = []
-    output_data = []
-    with open(filename, 'r') as f:
-        for line in f:
-            data = list(map(float, line[:-1].split(',')))
-            data[:2] /= np.sqrt(data[0]**2 + data[1]**2)
-            data_rel = [0, 0, 0]
-            if data[1] > 0:
-                data_rel[0] = data[1]
-            else:
-                data_rel[2] = -data[1]
-            if (data[0] < 0):
-                data_rel[1] = -data[0]
-            input_data.append(data_rel)
-            output_data.append(data[2:])
-    return {'input': input_data, 'output': output_data}
-
-
-def slice_data(data, i, j):
-    return {key: data[key][i:j + 1] for key in data.keys()}
+        for i in range(iterations):
+            output = self.__forward(input_data, alpha)
+        return Two_Layer_SNN.cal_degree(output)
 
 
 if __name__ == '__main__':
-    snn = Two_Layer_SNN(hidden_dim=10)
-    # Set this value to true in order to train the network on a single value
+    snn = Two_Layer_SNN(hidden_dim=10, load=True)
     data = load_data()
-    snn.train(slice_data(data, 12, 12))
-    # np.savetxt('W1.txt', snn.W1)
-    # np.savetxt('W2.txt', snn.W2)
-    # np.savetxt('W3.txt', snn.W3)
+    iterations = 500
+    eta = (p.eta_max - p.eta_min) / iterations
+    for t in range(iterations):
+        # train only data number 12
+        snn.train(slice_data(data, 12, 12), eta)
