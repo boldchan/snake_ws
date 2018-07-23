@@ -60,7 +60,7 @@ class Two_Layer_SNN(object):
     def cal_degree(pos):
         act_l = pos[0] / 5
         act_r = pos[1] / 5
-        deg = [180 * act_l, -180 * act_r]
+        deg = [-180 * act_l, 180 * act_r]
         return deg
 
     def __init__(self, input_dim=3, hidden_dim=3, output_dim=2, T=p.T, dt=p.dt, t_rest=0, load=False):
