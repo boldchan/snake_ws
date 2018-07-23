@@ -193,7 +193,6 @@ class JointCmdSrvr:
 
 # run the server
 if __name__ == "__main__":
-
     jnt_cmd_srvr = JointCmdSrvr()
 
     print "joint_cmd_srvr started, waiting for queries"

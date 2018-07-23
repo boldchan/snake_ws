@@ -21,20 +21,20 @@ for _ in range(500):
 	alphaR = alphaL = 0
 	if rel_x < 0:
 		if rel_y > 0:
-			alphaL = 90
-			alphaR = -180
+			alphaL = -90
+			alphaR = 180
 		else:
-			alphaL = 180
-			alphaR = -90
+			alphaL = -180
+			alphaR = 90
 	else:
 		val = rel_y / dist
 		alpha = math.asin(val)*(180/math.pi)
 		if alpha > 0:
-			alphaL = alpha
-			alphaR = -180
+			alphaL = -alpha
+			alphaR = 180
 		else:
-			alphaL = 180
-			alphaR = alpha
+			alphaL = -180
+			alphaR = -alpha
 
 	print(rel_x,rel_y,alphaL,alphaR)
 	f.write(str(rel_x) + ',' + str(rel_y) + ',' + str(alphaL) + ',' + str(alphaR) + '\n')

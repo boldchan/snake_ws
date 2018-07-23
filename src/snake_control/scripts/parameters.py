@@ -12,7 +12,7 @@ A_plus = 0.86/60
 A_minus = 0.25/60
 tau_plus = 19
 tau_minus = 34
-ymax = 90#180#?
+ymax = 90#?
 
 #parameters for eligibility trace
 wmax = 100

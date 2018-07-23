@@ -9,7 +9,7 @@ from snake_control.srv import *
 
 class SNN_Node(object):
     def __init__(self, load = False):
-        self.snn = Two_Layer_SNN(hidden_dim = 10, load = load)
+        self.snn = Two_Layer_SNN(hidden_dim = 30, load = load)
 
         rospy.wait_for_service('/snake/publish_joint_commands')
         self.commands_srv = rospy.ServiceProxy('/snake/publish_joint_commands', PublishJointCmds)
@@ -46,11 +46,11 @@ class SNN_Node(object):
         dist = np.sqrt(rel_x * rel_x + rel_y * rel_y)
         input = [0, 0, 0]
         if rel_y > 0:
-            input[0] = rel_y
+            input[0] = rel_y / dist
         else:
-            input[2] = -rel_y
+            input[2] = -rel_y / dist
         if rel_x < 0:
-            input[1] = -rel_x
+            input[1] = -rel_x / dist
 
         if rel_x < 0 or (rel_x > 0 and rel_x < 1.7 * abs(rel_y)):
             if rel_y > 0:
@@ -71,6 +71,42 @@ class SNN_Node(object):
         output = [alphaL, alphaR]
         self.dataset = {'input':input, 'output':output}
 
+    def preprocess2(self):
+        # create only input
+        rel_x = self.pos[0]
+        rel_y = self.pos[1]
+        dist = np.sqrt(rel_x * rel_x + rel_y * rel_y)
+        input = [0, 0, 0]
+        if rel_y > 0:
+            input[0] = rel_y / dist
+        else:
+            input[2] = -rel_y / dist
+        if rel_x < 0:
+            input[1] = -rel_x / dist
+        return input
+
+    def test(self):
+        input = self.preprocess2()
+        alphaL, alphaR = self.snn.test(input)
+        rospy.loginfo("calculated output: alphaL:%f, alphaR:%f"%(alphaL, alphaR))
+        if abs(alphaL) < abs(alphaR):
+            if abs(alphaL) > 30:
+                C_o = 30
+                w = 0.5#slow down when turning
+            else:
+                C_o = alphaL
+                w = 0.5
+        else:
+            if alphaR > 30:
+                C_o = -30
+                w = 0.5
+            else:
+                C_o = alphaR
+                w = 0.5
+        rospy.loginfo("calculated command: C_o:%f, w:%f"%(C_o, w))
+        self.control_cmd = [60 * np.pi /180, 40 * np.pi / 180, C_o *np.pi / 180, 0, w]
+
+
     def callback(self):
         self.preprocess()
         alphaL, alphaR = self.snn.simulate(self.dataset, 10)
@@ -78,14 +114,18 @@ class SNN_Node(object):
         if abs(alphaL) < abs(alphaR):
             if abs(alphaL) > 30:
                 C_o = 30
+                w = 0.2#slow down when turning
             else:
                 C_o = alphaL
+                w = 0.5
         else:
             if alphaR > 30:
                 C_o = -30
+                w = 0.2
             else:
                 C_o = alphaR
-        self.control_cmd = [60 * np.pi /180, 40 * np.pi / 180, C_o *np.pi / 180, 0, 0.5]
+                w = 0.5
+        self.control_cmd = [60 * np.pi /180, 40 * np.pi / 180, C_o *np.pi / 180, 0, w]
 
     # def listener(self):
     #     rospy.Subscriber("/snake_head_pos", snake_head_rel_pos, self.callback, queue_size = 1)
@@ -122,15 +162,18 @@ class SNN_Node(object):
 if __name__ == "__main__":
     try:
         rospy.init_node('SNN')
-        snn_node = SNN_Node()
+        snn_node = SNN_Node(load = True)
         rate = rospy.Rate(1/(2*np.pi))
+        # cnt = 60
         while not rospy.is_shutdown():
-            time1 = rospy.get_rostime()
+            # cnt -= 1
+            # if cnt == 0:
+            #     snn_node.snn.save_weight()
+            #     cnt = 60
             snn_node.query()
-            snn_node.callback()
+            #snn_node.callback()
+            snn_node.test()
             snn_node.publish_cmd()
-            time2 = rospy.get_rostime()
-            rospy.loginfo("calculation time: %f"%(time2 - time1).secs)
             rate.sleep()
     except rospy.ROSInterruptException:
         pass

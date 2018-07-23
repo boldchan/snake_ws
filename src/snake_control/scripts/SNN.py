@@ -1,6 +1,7 @@
 import numpy as np
 from Neuron import input_neuron, hidden_neuron, output_neuron, special_neuron
 import parameters as p
+from os import path, getcwd
 
 
 def load_data(filename='target_data.txt'):
@@ -103,9 +104,9 @@ class Two_Layer_SNN(object):
         np.savetxt('W3.txt', self.W3)
 
     def load_weight(self):
-        self.W1 = np.loadtxt('W1.txt')
-        self.W2 = np.loadtxt('W2.txt')
-        self.W3 = np.loadtxt('W3.txt')
+        self.W1 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W1.txt'))
+        self.W2 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W2.txt'))
+        self.W3 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W3.txt'))
 
     def update_stdp(self, l1, l2):
         '''
@@ -164,23 +165,27 @@ class Two_Layer_SNN(object):
         if np.abs(expected[1]) < np.abs(expected[0]):
             # turn right
             rewardR = (np.abs(expected[1]) - np.abs(out[1]))/p.ymax
-            rewardL = 0
-            # if rewardR > 0:
-            #     rewardL = 0.1
-            # elif np.abs(out[1]) > np.abs(out[0]):
-            #     rewardL = 0.1
-            # else:
-            #     rewardL = -0.1
+            # rewardL = 0
+            if rewardR > 0:
+                rewardL = 0.3
+            elif np.abs(out[1]) > np.abs(out[0]) - 20:
+                rewardL = 0.1
+            elif np.abs(out[1]) > np.abs(out[0]) - 30:
+                rewardL = 0
+            else:
+                rewardL = -0.1
         else:
             # turn left
             rewardL = (np.abs(expected[0]) - np.abs(out[0]))/p.ymax
-            rewardR = 0
-            # if reawrdL > 0:
-            #     rewardR = 0.1
-            # elif np.abs(out[0]) > np.abs(out[1]):
-            #     rewardR = 0.1
-            # else:
-            #     rewardR = -0.1
+            # rewardR = 0
+            if rewardL > 0:
+                rewardR = 0.3
+            elif np.abs(out[0]) > np.abs(out[1]) - 20:
+                rewardR = 0.1
+            elif np.abs(out[0] > np.abs(out[1])) - 30:
+                rewardR = 0
+            else:
+                rewardR = -0.1
 
         self.reward2[:, 0] = rewardL
         self.reward2[:, 1] = rewardR
@@ -201,16 +206,23 @@ class Two_Layer_SNN(object):
         self.calculate_deltaW()
         return res
 
+    def test(self, data):
+        _, out1 = self.input_neuron.forward(data)
+        _, out2 = self.hidden_neuron.forward(out1, self.W1)
+        _, out3 = self.output_neuron.decode(out2, self.W2)
+        res = Two_Layer_SNN.cal_degree([out3[0][-1], out3[1][-1]])
+        return res        
+
     def train(self, data, eta_reduction=None):
         num_data = len(data['input'])
         if not eta_reduction:
             eta_reduction = (p.eta_max - p.eta_min) / num_data
         for d, alpha in zip(data['input'], data['output']):
             output = self.__feed(d, alpha)
-            self.eta = self.eta - eta_reduction
             print('Predicted :    {}'.format(output))
             print('Actual Value:  {}'.format(alpha))
             print('Learning rate: {}'.format(self.eta))
+        self.eta = self.eta - eta_reduction
 
     def simulate(self, data, iterations):
         input_data = data['input']
@@ -221,10 +233,15 @@ class Two_Layer_SNN(object):
 
 
 if __name__ == '__main__':
-    snn = Two_Layer_SNN(hidden_dim=10, load=True)
+    snn = Two_Layer_SNN(hidden_dim=30, load=False)
+
     data = load_data()
-    iterations = 500
+    iterations = 5
     eta = (p.eta_max - p.eta_min) / iterations
     for t in range(iterations):
         # train only data number 12
-        snn.train(slice_data(data, 12, 12), eta)
+        # snn.train(slice_data(data, 12, 12), eta)
+        res=snn.test([np.sqrt(2)/2,0,0])
+        print(res)
+        # snn.train(data, eta)
+        # snn.save_weight()
