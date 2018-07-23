@@ -31,7 +31,7 @@ class JointCmds:
                 leg_str += str(i)
             self.joints_list += [leg_str]
 
-    def update(self, dt):
+    def update(self, dt, mode):
 
         def sidewinding():
             # spatial frequency
@@ -57,7 +57,7 @@ class JointCmds:
             z = 0.7
             A_o = 60 * np.pi / 180
             A_e = 40 * np.pi / 180
-            C_o = 0 * np.pi / 180
+            C_o = 30 * np.pi / 180
             C_e = 0
             for n, jnt in enumerate(self.joints_list):
                 if n % 2 == 1:
@@ -84,6 +84,7 @@ class JointCmds:
 
 
 def publish_commands(num_modules, hz):
+    cnt=100000
     pub = {}
     ns_str = '/snake'
     cont_str = 'eff_pos_controller'
@@ -100,7 +101,7 @@ def publish_commands(num_modules, hz):
     rate = rospy.Rate(hz)
     jntcmds = JointCmds(num_mods=num_modules)
     while not rospy.is_shutdown():
-        jnt_cmd_dict = jntcmds.update(1./hz)
+        jnt_cmd_dict = jntcmds.update(1./hz, 0)
         for jnt in jnt_cmd_dict.keys():
             pub[jnt].publish(jnt_cmd_dict[jnt])
         rate.sleep()
@@ -110,6 +111,6 @@ if __name__ == "__main__":
     try:
         num_modules = 16
         hz = 100
-        # publish_commands(num_modules, hz)
+        publish_commands(num_modules, hz)
     except rospy.ROSInterruptException:
         pass

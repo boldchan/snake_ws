@@ -195,7 +195,7 @@ class Two_Layer_SNN(object):
         if np.abs(expected[1]) < np.abs(expected[0]):
             # turn right
             rewardR = (np.abs(expected[1]) - np.abs(out[1]))/p.ymax
-            rewardL = 0
+            rewardL = 0.1
             # if rewardR > 0:
             #     rewardL = 0.1
             # elif np.abs(out[1]) > np.abs(out[0]):
@@ -205,7 +205,7 @@ class Two_Layer_SNN(object):
         else:
             # turn left
             rewardL = (np.abs(expected[0]) - np.abs(out[0]))/p.ymax
-            rewardR = 0
+            rewardR = 0.1
             # if reawrdL > 0:
             #     rewardR = 0.1
             # elif np.abs(out[0]) > np.abs(out[1]):
@@ -220,6 +220,19 @@ class Two_Layer_SNN(object):
             reward = (abs(self.W2[i][0])*rewardL + abs(self.W2[i][1])*rewardR) / (abs(self.W2[i][0]) + abs(self.W2[i][1]))
             self.reward1[:,i] = reward
 
+    def train_single(data):
+        d = data['input'][i]
+        alpha = data['output'][i]
+        _, out1 = self.input_neuron.forward(d)
+        _, out2 = self.hidden_neuron.forward(out1, self.W1)
+        _, out3 = self.output_neuron.decode(out2, self.W2)
+        out = self.cal_degree([out3[0][-1], out3[1][-1]])
+        self.update_rewards(out, alpha)
+        self.updateSTDP1(out1, out2)
+        self.updateSTDP2(out2, out3)
+        self.calculate_deltaW()
+        return out
+
     def train(self, train_single):
         ##todo##
         data = load_data()
@@ -229,9 +242,9 @@ class Two_Layer_SNN(object):
             out_deg = self.simulate(val, 100)
             print('Output: ' + str(out_deg))
             print('Input: ' + str(data['input'][2]))
-        for i in range(num_data):
+        for i in range(100):
             if(train_single): break
-            # i = 2
+            i = 2
             d = data['input'][i]
             alpha = data['output'][i]
             _, out1 = self.input_neuron.forward(d)
@@ -265,7 +278,8 @@ class Two_Layer_SNN(object):
         deg = [0., 0.]
         act_l = out[0]/5
         act_r = out[1]/5
-        deg[0] = -180*act_l
+        # deg[0] = -180*act_l
+        deg[0] = 180*act_l
         deg[1] = 180*act_r 
         return deg
 
