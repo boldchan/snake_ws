@@ -80,7 +80,7 @@ class Two_Layer_SNN(object):
         if load:
             self.load_weight()
         else:
-            self.W1, self.W2, self.W3 = Two_Layer_SNN.generate_weight(
+            self.W1, self.W2, self.W3 = Two_Layer_SNN.__generate_weight(
                 input_dim, hidden_dim, output_dim
             )
 
@@ -216,8 +216,8 @@ class Two_Layer_SNN(object):
         input_data = data['input']
         alpha = data['output']
         for i in range(iterations):
-            output = self.__forward(input_data, alpha)
-        return Two_Layer_SNN.cal_degree(output)
+            output = self.__feed(input_data, alpha)
+        return output
 
 
 if __name__ == '__main__':
