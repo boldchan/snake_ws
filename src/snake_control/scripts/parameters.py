@@ -1,6 +1,6 @@
 eta = 0.005 #learning rate
 eta_max = 0.01 #learning rate
-eta_min = 0.002
+eta_min = 0.001
 #parameters for rewards
 taupre = taupost = 10
 Apre = 0.1
@@ -13,11 +13,12 @@ A_minus = 0.25/60
 tau_plus = 19
 tau_minus = 34
 ymax = 90#?
+reward_irrev = 0.01
 
 #parameters for eligibility trace
 wmax = 100
 c1 = 1 / wmax
-c2 = 1/ wmax #?
+c2 = 1 #?
 
 
 #input layer

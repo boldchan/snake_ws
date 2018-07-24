@@ -94,6 +94,7 @@ class Two_Layer_SNN(object):
         self.reward3 = np.zeros_like(self.W3)
 
         self.eta = p.eta_max  # learning rate, ignore decay for now
+        self.error = 0
 
         self.STDP1 = np.zeros((input_dim, hidden_dim))
         self.STDP2 = np.zeros((hidden_dim, output_dim))
@@ -162,30 +163,33 @@ class Two_Layer_SNN(object):
         '''
         # turn right
         # pdb.set_trace()
+        reward_irrev = p.reward_irrev
         if np.abs(expected[1]) < np.abs(expected[0]):
+            self.error += np.abs(expected[1] - out[1])
             # turn right
             rewardR = (np.abs(expected[1]) - np.abs(out[1]))/p.ymax
             # rewardL = 0
             if rewardR > 0:
-                rewardL = 0.3
-            elif np.abs(out[1]) > np.abs(out[0]) - 20:
-                rewardL = 0.1
-            elif np.abs(out[1]) > np.abs(out[0]) - 30:
-                rewardL = 0
+                rewardL = reward_irrev
+            elif np.abs(out[1]) > np.abs(out[0]):
+                rewardL = reward_irrev
             else:
-                rewardL = -0.1
+                rewardL = -reward_irrev
+            if np.abs(out[1]) > 90 and np.abs(out[1]) < np.abs(out[0]):
+                rewardL = rewardR = 0
         else:
+            self.error += np.abs(expected[0] - out[0])
             # turn left
             rewardL = (np.abs(expected[0]) - np.abs(out[0]))/p.ymax
             # rewardR = 0
             if rewardL > 0:
-                rewardR = 0.3
-            elif np.abs(out[0]) > np.abs(out[1]) - 20:
-                rewardR = 0.1
-            elif np.abs(out[0] > np.abs(out[1])) - 30:
-                rewardR = 0
+                rewardR = reward_irrev
+            elif np.abs(out[0]) > np.abs(out[1]):
+                rewardR = reward_irrev
             else:
-                rewardR = -0.1
+                rewardR = -reward_irrev
+            if np.abs(out[0]) > 90 and np.abs(out[0]) < np.abs(out[1]):
+                rewardL = rewardR = 0
 
         self.reward2[:, 0] = rewardL
         self.reward2[:, 1] = rewardR
@@ -215,6 +219,7 @@ class Two_Layer_SNN(object):
 
     def train(self, data, eta_reduction=None):
         num_data = len(data['input'])
+        self.error = 0
         if not eta_reduction:
             eta_reduction = (p.eta_max - p.eta_min) / num_data
         for d, alpha in zip(data['input'], data['output']):
@@ -222,6 +227,7 @@ class Two_Layer_SNN(object):
             print('Predicted :    {}'.format(output))
             print('Actual Value:  {}'.format(alpha))
             print('Learning rate: {}'.format(self.eta))
+        self.error = self.error / num_data
         self.eta = self.eta - eta_reduction
 
     def simulate(self, data, iterations):
@@ -238,9 +244,13 @@ if __name__ == '__main__':
     data = load_data()
     iterations = 5
     eta = (p.eta_max - p.eta_min) / iterations
+    error = []
     for t in range(iterations):
         # train only data number 12
         # snn.train(slice_data(data, 12, 12), eta)
+        snn.train(data, eta)
+        error.append(snn.error)
+        print ('Average angle error in each iteration : {}'.format(error))
         res=snn.test([np.sqrt(2)/2,0,0])
         print(res)
         # snn.train(data, eta)
