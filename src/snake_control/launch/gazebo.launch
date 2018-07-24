@@ -1,6 +1,6 @@
 <launch>
   <!-- these are the arguments you can pass this launch file, for example paused:=true -->
-  <arg name="paused" default="true"/>
+  <arg name="paused" default="false"/>
   <arg name="use_sim_time" default="true"/>
   <arg name="gui" default="true"/>
   <arg name="headless" default="false"/>
@@ -48,7 +48,7 @@
   </node>
 
   <!-- call with gait:=true to start walking controller node with gazebo -->
-  <arg name="gait" default="true" />
+  <arg name="gait" default="false" />
   <group if="$(arg gait)">
     <node name="snake_controller" pkg="snake_control" type="gaits.py" />
   </group>
