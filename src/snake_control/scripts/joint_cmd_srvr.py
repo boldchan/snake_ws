@@ -13,8 +13,6 @@ class JointCmds:
     """ The class provides a dictionary mapping joints to command values.
     """
 
-    # def __init__(self, yaml_file_name='/home/attakorn/projects/'
-    #              'snake_ws/src/snake_control/config/modules.yaml'):
     def __init__(self, yaml_file_name=os.path.abspath(
             'src/snake_control/config/modules.yaml')):
 
@@ -28,74 +26,39 @@ class JointCmds:
         self.num_modules = len(self.modules_dict)
         self.sorted_joints_list = sorted(self.modules_dict.keys())
         self.jnt_cmd_dict = {}
-        # self.default_cmd_params = [0.38*np.pi/2.0, 3.0/8.0, 0.08]
-        self.default_cmd_params = [60*np.pi/180,
-                                   40*np.pi/180, 0, 0]  # A_o, A_e, C_o, C_e
         self.joints_list = []
         self.t = 0.0
 
         for i in range(self.num_modules):
-            leg_str = 'S_'
-            if i < 10:
-                leg_str += '0' + str(i)
-            else:
-                leg_str += str(i)
+            leg_str = 'S_{:02}'.format(i)
             self.joints_list += [leg_str]
 
-    def update(self, dt, cmd_params=None):
+    def update(self, dt,
+               A_o=60 * np.pi / 180,
+               A_e=40 * np.pi / 180,
+               C_o=0,
+               C_e=0,
+               w=0.5):
         """ Publishes snake joint commands for tracking with PID controller
             :param dt: The time elapsed since the last command
             :param cmd_params: A vector of control parameters
         """
 
-#         self.t += dt
-
-#         if cmd_params is None :
-#             cmd_params = default_cmd_params
-
-#         A = cmd_params[0]        # the amplitude of the serpenoid equation
-#         omega_t = cmd_params[1]  # the temporal frequency of the serpenoid equation
-#         omega_s = cmd_params[2]  # the spatial frequency of the serpenoid equation
-
-#         ## sidewinding gait ##
-#         d = 1  # direction
-
-#         for i, jnt in enumerate( self.sorted_joints_list ) :
-#             self.jnt_cmd_dict[jnt] = A*np.sin( 2.0*np.pi*(d*self.t + (i%2)*omega_t + i*omega_s) )
-
-#         return self.jnt_cmd_dict
         def sidewinding():
-            # spatial frequency
             spat_freq = 0.08
-
-            # temporal phase offset between horizontal and vertical waves
             TPO = 3.0/8.0
-
-            # amplitude
             A = 0.38*np.pi/2.0
-
-            # direction
             d = 1
 
             for i, jnt in enumerate(self.joints_list):
                 self.jnt_cmd_dict[jnt] = A * \
                     np.sin(2.0*np.pi*(d*self.t + (i % 2)*TPO + i*spat_freq))
 
-        def slithering(cmd_params):
+        def slithering(A_o, A_e, C_o, C_e, w):
             N = self.num_modules
-            # w = 0.5
-            w = cmd_params[4]
             y = 0.3
             z = 0.7
-            # A_o = 60 * np.pi / 180
-            # A_e = 40 * np.pi / 180
-            # C_o = 20 * np.pi / 180
-            # C_e = 0
-            A_o = cmd_params[0]
-            A_e = cmd_params[1]
-            C_o = cmd_params[2]
-            C_e = cmd_params[3]
-
+            speed = 2.625
             for n, jnt in enumerate(self.joints_list):
                 if n % 2 == 1:
                     x = 1.75
@@ -113,14 +76,10 @@ class JointCmds:
                 P = z * n / N + y
 
                 self.jnt_cmd_dict[jnt] = C + P * A * \
-                    np.sin(Omega * n + o * self.t + delta)
+                    np.sin(Omega * n + o * speed * self.t + delta)
 
-        self.default_cmd_params = [60*np.pi/180,
-                                   40*np.pi/180, 0, 0]  # A_o, A_e, C_o, C_e
         self.t += dt
-        if cmd_params is None:
-            cmd_params = default_cmd_params
-        slithering(cmd_params)
+        slithering(A_o, A_e, C_o, C_e, w)
         return self.jnt_cmd_dict
 
     def zero(self):
@@ -165,12 +124,14 @@ class JointCmdSrvr:
         cmd_params = req.params
         reset = req.reset
 
+        rospy.loginfo(cmd_params)
+
         rate = rospy.Rate(hz)
         dt = 1.0/float(hz)
         final_time = rospy.Time.now() + duration
 
         while not rospy.is_shutdown() and rospy.Time.now() < final_time:
-            jnt_cmd_dict = self.joint_cmds.update(dt=dt, cmd_params=cmd_params)
+            jnt_cmd_dict = self.joint_cmds.update(dt, *cmd_params)
             for jnt in jnt_cmd_dict.keys():
                 self.pub[jnt].publish(jnt_cmd_dict[jnt])
             rate.sleep()
@@ -194,6 +155,5 @@ class JointCmdSrvr:
 # run the server
 if __name__ == "__main__":
     jnt_cmd_srvr = JointCmdSrvr()
-
     print "joint_cmd_srvr started, waiting for queries"
     rospy.spin()
