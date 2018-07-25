@@ -54,11 +54,12 @@ class JointCmds:
             N = self.num_modules
             w = 0.5
             y = 0.3
-            z = 0.7
+            z = 1.0  # 0.7
             A_o = 60 * np.pi / 180
             A_e = 40 * np.pi / 180
             C_o = 0 * np.pi / 180
             C_e = 0
+            speed = 2.2
             for n, jnt in enumerate(self.joints_list):
                 if n % 2 == 1:
                     x = 1.75
@@ -76,7 +77,7 @@ class JointCmds:
                 P = z * n / N + y
 
                 self.jnt_cmd_dict[jnt] = C + P * A * \
-                    np.sin(Omega * n + o * self.t + delta)
+                    np.sin(Omega * n + o * speed * self.t + delta)
 
         self.t += dt
         slithering()
@@ -110,6 +111,6 @@ if __name__ == "__main__":
     try:
         num_modules = 16
         hz = 100
-        # publish_commands(num_modules, hz)
+        publish_commands(num_modules, hz)
     except rospy.ROSInterruptException:
         pass

@@ -57,8 +57,8 @@ class JointCmds:
         def slithering(A_o, A_e, C_o, C_e, w):
             N = self.num_modules
             y = 0.3
-            z = 0.7
-            speed = 2.625
+            z = 1.0
+            speed = 2.2
             for n, jnt in enumerate(self.joints_list):
                 if n % 2 == 1:
                     x = 1.75
