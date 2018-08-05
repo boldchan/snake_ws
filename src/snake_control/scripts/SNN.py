@@ -105,9 +105,12 @@ class Two_Layer_SNN(object):
         np.savetxt('W3.txt', self.W3)
 
     def load_weight(self):
-        self.W1 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W1.txt'))
-        self.W2 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W2.txt'))
-        self.W3 = np.loadtxt(path.join(getcwd(),'src/snake_control/scripts/W3.txt'))
+        self.W1 = np.loadtxt(
+            path.join(getcwd(), 'src/snake_control/scripts/W1.txt'))
+        self.W2 = np.loadtxt(
+            path.join(getcwd(), 'src/snake_control/scripts/W2.txt'))
+        self.W3 = np.loadtxt(
+            path.join(getcwd(), 'src/snake_control/scripts/W3.txt'))
 
     def update_stdp(self, l1, l2):
         '''
@@ -126,7 +129,7 @@ class Two_Layer_SNN(object):
                     apost[i][j] -= apost[i][j] / p.taupost * self.dt
                     if(l1[i][t]):
                         apre[i][j] += p.Apre
-                        stdp += apost[i][j]
+                        stdp[i][j] += apost[i][j]
                     if(l2[j][t]):
                         apost[i][j] += p.Apost
                         stdp[i][j] += apre[i][j]
@@ -215,7 +218,7 @@ class Two_Layer_SNN(object):
         _, out2 = self.hidden_neuron.forward(out1, self.W1)
         _, out3 = self.output_neuron.decode(out2, self.W2)
         res = Two_Layer_SNN.cal_degree([out3[0][-1], out3[1][-1]])
-        return res        
+        return res
 
     def train(self, data, eta_reduction=None):
         num_data = len(data['input'])
@@ -251,7 +254,7 @@ if __name__ == '__main__':
         snn.train(data, eta)
         error.append(snn.error)
         print ('Average angle error in each iteration : {}'.format(error))
-        res=snn.test([np.sqrt(2)/2,0,0])
+        res = snn.test([np.sqrt(2)/2, 0, 0])
         print(res)
         # snn.train(data, eta)
         # snn.save_weight()
