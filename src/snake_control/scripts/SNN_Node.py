@@ -91,7 +91,7 @@ class SNN_Node(object):
         self.pos = [pos_rel[0], pos_rel[1]]
 
         time = rospy.get_rostime()
-        rospy.loginfo("%s, %f, %f" % (time.secs, self.pos[0], self.pos[1]))
+        #rospy.loginfo("%s, %f, %f" % (time.secs, self.pos[0], self.pos[1]))
 
     def publish_cmd(self):
         self.commands_srv(100, rospy.Duration(
