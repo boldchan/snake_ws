@@ -10,25 +10,24 @@ from std_msgs.msg import Float64
 
 import numpy as np
 
+from gazebo_msgs.msg import ModelStates
+from snake_control.msg import TargetPosition
+
 
 class JointCmds:
     """
     The class provides a dictionary mapping joints to command values.
     """
 
-    def __init__(self, num_mods):
+    def __init__(self, num_mods, C_t):
 
         self.num_modules = num_mods
         self.jnt_cmd_dict = {}
         self.joints_list = []
         self.t = 0.0
-
+        self.C_t = C_t
         for i in range(self.num_modules):
-            leg_str = 'S_'
-            if i < 10:
-                leg_str += '0' + str(i)
-            else:
-                leg_str += str(i)
+            leg_str = 'S_{:02}'.format(i)
             self.joints_list += [leg_str]
 
     def update(self, dt):
@@ -54,10 +53,10 @@ class JointCmds:
             N = self.num_modules
             w = 0.5
             y = 0.3
-            z = 1.0  # 0.7
+            z = 2.0
             A_o = 60 * np.pi / 180
             A_e = 40 * np.pi / 180
-            C_o = 0 * np.pi / 180
+            C_o = self.C_t * np.pi / 180
             C_e = 0
             speed = 2.2
             for n, jnt in enumerate(self.joints_list):
@@ -84,33 +83,56 @@ class JointCmds:
         return self.jnt_cmd_dict
 
 
-def publish_commands(num_modules, hz):
+class HeadPosition(object):
+
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.z = 0
+
+    def callback(self, msg):
+        # name: [robot]
+        robot = msg.pose[1]
+        self.x = robot.position.x
+        self.y = robot.position.y
+        self.z = robot.position.z
+
+
+def publish_commands(num_modules, hz, monitor):
+    T = 100
+    C_t = 0
     pub = {}
     ns_str = '/snake'
     cont_str = 'eff_pos_controller'
     for i in range(num_modules):
-        leg_str = 'S_'
-        if i < 10:
-            leg_str += '0' + str(i)
-        else:
-            leg_str += str(i)
+        leg_str = 'S_{:02}'.format(i)
         pub[leg_str] = rospy.Publisher(ns_str + '/' + leg_str + '_'
                                        + cont_str + '/command',
                                        Float64, queue_size=10)
     rospy.init_node('snake_controller', anonymous=True)
     rate = rospy.Rate(hz)
-    jntcmds = JointCmds(num_mods=num_modules)
-    while not rospy.is_shutdown():
-        jnt_cmd_dict = jntcmds.update(1./hz)
-        for jnt in jnt_cmd_dict.keys():
-            pub[jnt].publish(jnt_cmd_dict[jnt])
-        rate.sleep()
+    jntcmds = JointCmds(num_mods=num_modules, C_t=C_t)
+    with open('position-{}.txt'.format(C_t), 'w') as writer:
+        while not rospy.is_shutdown() and jntcmds.t <= T:
+            jnt_cmd_dict = jntcmds.update(1./hz)
+            for jnt in jnt_cmd_dict.keys():
+                pub[jnt].publish(jnt_cmd_dict[jnt])
+            writer.write('{} {} {} {}\n'.format(
+                jntcmds.t, monitor.x, monitor.y, monitor.z))
+            rate.sleep()
 
 
 if __name__ == "__main__":
     try:
         num_modules = 16
         hz = 100
-        publish_commands(num_modules, hz)
+        monitor = HeadPosition()
+        rospy.Subscriber(
+            '/gazebo/model_states',
+            ModelStates,
+            monitor.callback,
+            queue_size=1
+        )
+        publish_commands(num_modules, hz, monitor)
     except rospy.ROSInterruptException:
         pass
